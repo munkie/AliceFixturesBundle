@@ -98,7 +98,7 @@ class FixtureManager implements FixtureManagerInterface
     }
 
     /**
-     * Loads entites from file, does _not_ persist them.
+     * Loads entities from file, does _not_ persist them.
      *
      * @param array $files
      * @param string $type
@@ -130,7 +130,7 @@ class FixtureManager implements FixtureManagerInterface
      */
     public function load(FixtureSet $set, array $initialReferences = array())
     {
-        $loaders = $this->createNeededLoaders($set);
+        $loader = $this->loaderFactory->getLoader($set->getLocale());
 
         // Objects are the loaded entities without "local".
         $objects = array();
@@ -142,44 +142,21 @@ class FixtureManager implements FixtureManagerInterface
             // Use seed before each loading, so results will be more predictable.
             $this->initSeedFromSet($set);
 
-            $loader = $loaders[$file['type']];
-
             $loader->setReferences($references);
             $this->logDebug(sprintf('Loading file: %s ...', $file['path']));
             $newObjects = $loader->load($file['path']);
             $references = $loader->getReferences();
 
-            $this->logDebug("Loaded ".count($newObjects)." file '" . $file['path'] . "'.");
+            $this->logDebug(sprintf("Loaded %s file '%s'.", count($newObjects), $file['path']));
             $objects = array_merge($objects, $newObjects);
         }
 
         if ($set->getDoPersist()) {
             $this->persist($objects, $set->getDoDrop());
-            $this->logDebug("Persisted " . count($objects) . " loaded objects.");
+            $this->logDebug(sprintf('Persisted %d loaded objects.', count($objects)));
         }
 
         return $objects;
-    }
-
-    /**
-     * @param FixtureSet $set
-     * @return \Nelmio\Alice\Fixtures\Loader[]
-     */
-    private function createNeededLoaders(FixtureSet $set)
-    {
-        $loaders = array();
-
-        foreach ($set->getFiles() as $file) {
-            $type = $file['type'];
-            if (!isset($loaders[$type])) {
-                $loader = $this->loaderFactory->getLoader($set->getLocale());
-                $this->configureLoader($loader);
-                $loaders[$type] = $loader;
-                $this->logDebug("Created loader for type '$type'.");
-            }
-        }
-
-        return $loaders;
     }
 
     /**
@@ -270,26 +247,6 @@ class FixtureManager implements FixtureManagerInterface
     }
 
     /**
-     * Sets all needed options and dependencies to a loader.
-     *
-     * @param Loader $loader
-     */
-    protected function configureLoader(Loader $loader)
-    {
-        if ($loader instanceof Loader) {
-            $loader->setPersister($this->getORM());
-            if ($this->logger) {
-                $loader->setLogger($this->logger);
-            }
-        }
-        if (is_callable(array($loader, 'addProvider'))) { // new in Alice 1.7.2
-            $loader->addProvider($this->providers);
-        } else { // BC path
-            $loader->setProviders($this->providers);
-        }
-    }
-
-    /**
      * Logs a message in debug level.
      *
      * @param $message
@@ -303,6 +260,8 @@ class FixtureManager implements FixtureManagerInterface
 
     /**
      * Initializes the seed for random numbers, given by a fixture set.
+     *
+     * @param FixtureSet $set
      */
     protected function initSeedFromSet(FixtureSet $set)
     {
@@ -334,17 +293,17 @@ class FixtureManager implements FixtureManagerInterface
      */
     protected function persistObjects(ORMInterface $persister, array $objects)
     {
-        foreach ($this->processors as $proc) {
+        foreach ($this->processors as $processor) {
             foreach ($objects as $obj) {
-                $proc->preProcess($obj);
+                $processor->preProcess($obj);
             }
         }
 
         $persister->persist($objects);
 
-        foreach ($this->processors as $proc) {
+        foreach ($this->processors as $processor) {
             foreach ($objects as $obj) {
-                $proc->postProcess($obj);
+                $processor->postProcess($obj);
             }
         }
     }

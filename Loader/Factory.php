@@ -12,6 +12,7 @@
 namespace h4cc\AliceFixturesBundle\Loader;
 
 use Nelmio\Alice\Fixtures\Loader;
+use Nelmio\Alice\PersisterInterface;
 
 /**
  * Class Factory
@@ -22,6 +23,62 @@ use Nelmio\Alice\Fixtures\Loader;
 class Factory implements FactoryInterface
 {
     /**
+     * Faker providers.
+     *
+     * @var array
+     */
+    protected $providers = [];
+
+    /**
+     * Builders
+     *
+     * @var \Nelmio\Alice\Fixtures\Builder\Methods\MethodInterface[]
+     */
+    protected $builders = [];
+
+    /**
+     * Instantiators
+     *
+     * @var \Nelmio\Alice\Instances\Instantiator\Methods\MethodInterface[]
+     */
+    protected $instantiators = [];
+
+    /**
+     * Parsers
+     *
+     * @var \Nelmio\Alice\Fixtures\Parser\Methods\MethodInterface[]
+     */
+    protected $parsers = [];
+
+    /**
+     * Populators
+     *
+     * @var \Nelmio\Alice\Instances\Populator\Methods\MethodInterface[]
+     */
+    protected $populators = [];
+
+    /**
+     * Processors.
+     *
+     * @var \Nelmio\Alice\Instances\Processor\Methods\MethodInterface[]
+     */
+    protected $processors = [];
+
+    /**
+     * Optional logger.
+     *
+     * @var \Psr\Log\LoggerInterface
+     */
+    protected $logger;
+
+    /**
+     * Persister
+     *
+     * @var PersisterInterface
+     */
+    protected $persister;
+
+    /**
      * Returns a loader for a specific type and locale.
      *
      * @param $locale
@@ -29,6 +86,32 @@ class Factory implements FactoryInterface
      */
     public function getLoader($locale)
     {
-        return new Loader($locale);
+        $loader = new Loader($locale);
+
+        foreach ($this->builders as $builder) {
+            $loader->addBuilder($builder);
+        }
+        foreach ($this->instantiators as $instantiator) {
+            $loader->addInstantiator($instantiator);
+        }
+        foreach ($this->parsers as $parser) {
+            $loader->addParser($parser);
+        }
+        foreach ($this->populators as $populator) {
+            $loader->addPopulator($populator);
+        }
+        foreach ($this->processors as $processor) {
+            $loader->addProcessor($processor);
+        }
+        foreach ($this->providers as $provider) {
+            $loader->addProvider($provider);
+        }
+
+        $loader->setPersister($this->persister);
+        if ($this->logger) {
+            $loader->setLogger($this->logger);
+        }
+
+        return $loader;
     }
 }
