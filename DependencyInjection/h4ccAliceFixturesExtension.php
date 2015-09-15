@@ -132,7 +132,7 @@ class h4ccAliceFixturesExtension extends Extension
      */
     private function getSchemaToolClass($doctrineConfigName)
     {
-        switch($doctrineConfigName) {
+        switch ($doctrineConfigName) {
             case Configuration::DOCTRINE_ORM:
                 return '%h4cc_alice_fixtures.orm.schema_tool.doctrine.class%';
             case Configuration::DOCTRINE_MONGODB_ODM:

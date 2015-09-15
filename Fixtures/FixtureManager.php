@@ -30,31 +30,29 @@ use h4cc\AliceFixturesBundle\ORM\Doctrine;
 class FixtureManager implements FixtureManagerInterface
 {
     /**
-     * Global provider for Faker.
-     *
-     * @var array
-     */
-    protected $providers = array();
-    /**
      * @var ProcessorInterface[]
      */
-    protected $processors = array();
+    protected $processors = [];
+
     /**
      * Optional logger.
      *
-     * @var \Psr\Log\LoggerInterface
+     * @var LoggerInterface
      */
     protected $logger;
+
     /**
      * Default options for new FixtureSets.
      *
      * @var array
      */
-    protected $options = array();
+    protected $options = [];
+
     /**
      * @var \Nelmio\Alice\Persister\Doctrine
      */
     protected $orm;
+
     /**
      * @var SchemaToolInterface
      */
@@ -63,8 +61,8 @@ class FixtureManager implements FixtureManagerInterface
     /**
      * @param array $options
      * @param ManagerRegistry $managerRegistry
-     * @param \h4cc\AliceFixturesBundle\Loader\FactoryInterface $loaderFactory
-     * @param \h4cc\AliceFixturesBundle\ORM\SchemaToolInterface $schemaTool
+     * @param FactoryInterface $loaderFactory
+     * @param SchemaToolInterface $schemaTool
      * @param LoggerInterface $logger
      */
     public function __construct(
@@ -75,10 +73,7 @@ class FixtureManager implements FixtureManagerInterface
         LoggerInterface $logger = null
     )
     {
-        $this->options = array_merge(
-            $this->getDefaultOptions(),
-            $options
-        );
+        $this->options = $options + $this->getDefaultOptions();
         $this->orm = new Doctrine($managerRegistry, $this->options['do_flush']);
         $this->loaderFactory = $loaderFactory;
         $this->schemaTool = $schemaTool;
@@ -130,7 +125,7 @@ class FixtureManager implements FixtureManagerInterface
      */
     public function load(FixtureSet $set, array $initialReferences = array())
     {
-        $loader = $this->loaderFactory->getLoader($set->getLocale());
+        $loader = $this->createLoader($set->getLocale());
 
         // Objects are the loaded entities without "local".
         $objects = array();
@@ -157,6 +152,20 @@ class FixtureManager implements FixtureManagerInterface
         }
 
         return $objects;
+    }
+
+    /**
+     * @param string $locale
+     * @return Loader
+     */
+    protected function createLoader($locale)
+    {
+        $loader = $this->loaderFactory->getLoader($locale);
+        $loader->setPersister($this->orm);
+        if ($this->logger) {
+            $loader->setLogger($this->logger);
+        }
+        return $loader;
     }
 
     /**
@@ -219,31 +228,6 @@ class FixtureManager implements FixtureManagerInterface
     {
         $this->processors[] = $processor;
         $this->logDebug('Added processor: ' . get_class($processor));
-    }
-
-    /**
-     * Sets a list of providers for Faker.
-     *
-     * @param array $providers
-     */
-    public function setProviders(array $providers)
-    {
-        $this->providers = array();
-        foreach ($providers as $provider) {
-            $this->addProvider($provider);
-        }
-    }
-
-    /**
-     * Adds a provider for Faker.
-     *
-     * @param $provider
-     */
-    public function addProvider($provider)
-    {
-        $this->providers[] = $provider;
-        $this->providers = array_unique($this->providers, SORT_REGULAR);
-        $this->logDebug('Added provider: ' . get_class($provider));
     }
 
     /**

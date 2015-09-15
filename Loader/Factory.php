@@ -12,7 +12,6 @@
 namespace h4cc\AliceFixturesBundle\Loader;
 
 use Nelmio\Alice\Fixtures\Loader;
-use Nelmio\Alice\PersisterInterface;
 
 /**
  * Class Factory
@@ -28,6 +27,13 @@ class Factory implements FactoryInterface
      * @var array
      */
     protected $providers = [];
+
+    /**
+     * Processors.
+     *
+     * @var \Nelmio\Alice\Instances\Processor\Methods\MethodInterface[]
+     */
+    protected $processors = [];
 
     /**
      * Builders
@@ -58,30 +64,35 @@ class Factory implements FactoryInterface
     protected $populators = [];
 
     /**
-     * Processors.
+     * Factory constructor.
      *
-     * @var \Nelmio\Alice\Instances\Processor\Methods\MethodInterface[]
+     * @param array $providers
+     * @param \Nelmio\Alice\Instances\Processor\Methods\MethodInterface[] $processors
+     * @param \Nelmio\Alice\Fixtures\Builder\Methods\MethodInterface[] $builders
+     * @param \Nelmio\Alice\Instances\Instantiator\Methods\MethodInterface[] $instantiators
+     * @param \Nelmio\Alice\Fixtures\Parser\Methods\MethodInterface[] $parsers
+     * @param \Nelmio\Alice\Instances\Populator\Methods\MethodInterface[] $populators
      */
-    protected $processors = [];
-
-    /**
-     * Optional logger.
-     *
-     * @var \Psr\Log\LoggerInterface
-     */
-    protected $logger;
-
-    /**
-     * Persister
-     *
-     * @var PersisterInterface
-     */
-    protected $persister;
+    public function __construct(
+        array $providers = [],
+        array $processors = [],
+        array $builders = [],
+        array $instantiators = [],
+        array $parsers = [],
+        array $populators = []
+    ) {
+        $this->providers = $providers;
+        $this->processors = $processors;
+        $this->builders = $builders;
+        $this->instantiators = $instantiators;
+        $this->parsers = $parsers;
+        $this->populators = $populators;
+    }
 
     /**
      * Returns a loader for a specific type and locale.
      *
-     * @param $locale
+     * @param string $locale
      * @return Loader
      */
     public function getLoader($locale)
@@ -105,11 +116,6 @@ class Factory implements FactoryInterface
         }
         foreach ($this->providers as $provider) {
             $loader->addProvider($provider);
-        }
-
-        $loader->setPersister($this->persister);
-        if ($this->logger) {
-            $loader->setLogger($this->logger);
         }
 
         return $loader;
