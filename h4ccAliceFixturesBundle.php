@@ -12,6 +12,7 @@
 namespace h4cc\AliceFixturesBundle;
 
 use h4cc\AliceFixturesBundle\DependencyInjection\Compiler\AliceMethodsCompilerPass;
+use h4cc\AliceFixturesBundle\DependencyInjection\Compiler\ProcessorCompilerPass;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
@@ -26,6 +27,7 @@ class h4ccAliceFixturesBundle extends Bundle
     {
         parent::build($container);
 
+        $container->addCompilerPass(new ProcessorCompilerPass());
         $container->addCompilerPass(new AliceMethodsCompilerPass());
     }
 }

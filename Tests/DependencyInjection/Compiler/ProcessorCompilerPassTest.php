@@ -24,12 +24,11 @@ class ProcessorCompilerPassTest extends \PHPUnit_Framework_TestCase
     /** @var  ProcessorCompilerPass */
     protected $compilerPass;
 
-    /** @var  \PHPUnit_Framework_MockObject_MockObject */
+    /** @var  \PHPUnit_Framework_MockObject_MockObject|\Symfony\Component\DependencyInjection\ContainerBuilder */
     protected $containerMock;
 
     protected function setUp()
     {
-        $this->markTestSkipped();
         $this->compilerPass = new ProcessorCompilerPass();
 
         $this->containerMock = $this->getMockBuilder('\Symfony\Component\DependencyInjection\ContainerBuilder')

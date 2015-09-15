@@ -14,12 +14,12 @@ class AliceMethodsCompilerPass implements CompilerPassInterface
 
         $factoryDefinition->setArguments(
             [
-                $this->getTaggedServiceReferences($container, 'h4cc_alice_fixtures.provider'),
-                $this->getTaggedServiceReferences($container, 'h4cc_alice_fixtures.processor'),
-                $this->getTaggedServiceReferences($container, 'h4cc_alice_fixtures.builder'),
-                $this->getTaggedServiceReferences($container, 'h4cc_alice_fixtures.instantiator'),
-                $this->getTaggedServiceReferences($container, 'h4cc_alice_fixtures.parser'),
-                $this->getTaggedServiceReferences($container, 'h4cc_alice_fixtures.populator')
+                $this->getTaggedServiceReferences($container, 'alice.provider'),
+                $this->getTaggedServiceReferences($container, 'alice.processor'),
+                $this->getTaggedServiceReferences($container, 'alice.builder'),
+                $this->getTaggedServiceReferences($container, 'alice.instantiator'),
+                $this->getTaggedServiceReferences($container, 'alice.parser'),
+                $this->getTaggedServiceReferences($container, 'alice.populator')
             ]
         );
     }

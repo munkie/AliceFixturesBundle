@@ -12,8 +12,7 @@
 namespace h4cc\AliceFixturesBundle\Tests;
 
 use h4cc\AliceFixturesBundle\h4ccAliceFixturesBundle;
-use h4cc\AliceFixturesBundle\DependencyInjection\Compiler\ProviderCompilerPass;
-use h4cc\AliceFixturesBundle\DependencyInjection\Compiler\ProcessorCompilerPass;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 /**
  * Class h4ccAliceFixturesBundleTest
@@ -25,16 +24,18 @@ class h4ccAliceFixturesBundleTest extends \PHPUnit_Framework_TestCase
 {
     public function testBuild()
     {
+        /** @var ContainerBuilder|\PHPUnit_Framework_MockObject_MockObject $containerMock */
         $containerMock = $this->getMockBuilder('\Symfony\Component\DependencyInjection\ContainerBuilder')
           ->setMethods(array('addCompilerPass'))
           ->disableOriginalConstructor()
           ->getMock();
 
         $containerMock
-            ->expects($this->once())
+            ->expects($this->exactly(2))
             ->method('addCompilerPass')
-            ->with(
-                $this->isInstanceOf('\h4cc\AliceFixturesBundle\DependencyInjection\Compiler\AliceMethodsCompilerPass')
+            ->withConsecutive(
+                [$this->isInstanceOf('\h4cc\AliceFixturesBundle\DependencyInjection\Compiler\ProcessorCompilerPass')],
+                [$this->isInstanceOf('\h4cc\AliceFixturesBundle\DependencyInjection\Compiler\AliceMethodsCompilerPass')]
             );
 
         $bundle = new h4ccAliceFixturesBundle();
