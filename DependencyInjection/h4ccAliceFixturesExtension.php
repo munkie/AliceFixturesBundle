@@ -13,6 +13,7 @@ namespace h4cc\AliceFixturesBundle\DependencyInjection;
 
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\Config\FileLocator;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
@@ -67,8 +68,10 @@ class h4ccAliceFixturesExtension extends Extension
                 $managerConfig,
                 new Reference($this->getCleanDoctrineConfigName($currentManagerConfig['doctrine'])),
                 new Reference('h4cc_alice_fixtures.loader.factory'),
-                new Reference($schemaToolServiceId)
+                new Reference($schemaToolServiceId),
+                new Reference('logger', ContainerInterface::NULL_ON_INVALID_REFERENCE)
             ));
+            $managerServiceDefinition->addTag('monolog.logger', array('channel' => 'alice'));
 
             // set manager
             $container->setDefinition(sprintf(static::FIXTURE_MANAGER_NAME_MODEL, $name), $managerServiceDefinition);
