@@ -44,17 +44,17 @@ interface FixtureManagerInterface
      * @param array $initialReferences
      * @return mixed
      */
-    public function load(FixtureSet $set, array $initialReferences = array());
+    public function load(FixtureSet $set);
 
     /**
      * Persists all given entities.
      * Set drop to true for recreating the whole ORM schema before loading.
      *
-     * @param array $entities
+     * @param array $objects
      * @param bool $drop
      * @return mixed
      */
-    public function persist(array $entities, $drop = false);
+    public function persist(array $objects, $drop = false);
 
     /**
      * Remove all given entities.

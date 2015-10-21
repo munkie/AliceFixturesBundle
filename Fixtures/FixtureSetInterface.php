@@ -22,10 +22,9 @@ interface FixtureSetInterface
     /**
      * Adds a file to the set.
      *
-     * @param $path
-     * @param $type
+     * @param $dataOrFilename
      */
-    public function addFile($path, $type);
+    public function addFile($dataOrFilename);
 
     /**
      * Returns a list of file paths and types.

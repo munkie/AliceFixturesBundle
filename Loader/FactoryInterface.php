@@ -23,8 +23,9 @@ interface FactoryInterface
     /**
      * Returns a loader for a specific type and locale.
      *
-     * @param $locale
+     * @param string $locale
+     * @param int $seed
      * @return Loader
      */
-    public function getLoader($locale);
+    public function getLoader($locale, $seed = 1);
 }

@@ -10,6 +10,7 @@
  */
 
 namespace h4cc\AliceFixturesBundle\Fixtures;
+use h4cc\AliceFixturesBundle\FixtureOptionsResolver;
 
 /**
  * Class FixtureSet
@@ -34,33 +35,29 @@ class FixtureSet implements FixtureSetInterface
      *
      * @param array $options
      */
-    public function __construct(array $options = array())
+    public function __construct()
     {
-        $defaultOptions = array(
-            'locale' => 'en_US',
-            'seed' => 1,
-            'do_drop' => false,
-            'do_persist' => true,
-            'order' => 1,
-        );
-        $this->options = array_merge(
-            $defaultOptions,
-            $options
-        );
     }
 
     /**
      * Adds a file to the set.
      *
-     * @param $path
-     * @param $type
+     * @param array|string $dataOrFilename
      */
-    public function addFile($path, $type)
+    public function addFile($dataOrFilename)
     {
-        $this->files[md5($path)] = array(
-            'type' => $type,
-            'path' => $path,
-        );
+        $this->files[] = $dataOrFilename;
+        return $this;
+    }
+
+    /**
+     * @param array $files
+     */
+    public function addFiles(array $files)
+    {
+        foreach ($files as $file) {
+            $this->addFile($file);
+        }
     }
 
     /**
@@ -70,7 +67,7 @@ class FixtureSet implements FixtureSetInterface
      */
     public function getFiles()
     {
-        return array_values($this->files);
+        return $this->files;
     }
 
     /**

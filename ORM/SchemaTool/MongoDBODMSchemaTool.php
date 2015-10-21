@@ -9,18 +9,31 @@
  * file that was distributed with this source code.
  */
 
-namespace h4cc\AliceFixturesBundle\ORM;
+namespace h4cc\AliceFixturesBundle\ORM\SchemaTool;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ODM\MongoDB\DocumentManager;
+use h4cc\AliceFixturesBundle\ORM\SchemaTool\SchemaToolInterface;
 
 class MongoDBODMSchemaTool implements SchemaToolInterface
 {
+    /**
+     * @var ManagerRegistry
+     */
     protected $managerRegistry;
 
+    /**
+     * @param ManagerRegistry $managerRegistry
+     */
     public function __construct(ManagerRegistry $managerRegistry)
     {
         $this->managerRegistry = $managerRegistry;
+    }
+
+    public function recreateSchema()
+    {
+        $this->dropSchema();
+        $this->createSchema();
     }
 
     /**

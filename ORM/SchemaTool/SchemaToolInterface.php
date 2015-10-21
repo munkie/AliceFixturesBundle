@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace h4cc\AliceFixturesBundle\ORM;
+namespace h4cc\AliceFixturesBundle\ORM\SchemaTool;
 
 /**
  * Class SchemaToolInterface
@@ -21,12 +21,8 @@ namespace h4cc\AliceFixturesBundle\ORM;
 interface SchemaToolInterface
 {
     /**
-     * Removes current schema from database.
+     * Recreate create & drop or just purge data
      */
-    public function dropSchema();
+    public function recreateSchema();
 
-    /**
-     * Creates current schema in database.
-     */
-    public function createSchema();
 }

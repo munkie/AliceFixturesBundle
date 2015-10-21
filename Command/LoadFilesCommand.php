@@ -11,6 +11,8 @@
 
 namespace h4cc\AliceFixturesBundle\Command;
 
+use h4cc\AliceFixturesBundle\FixtureManagerRegistry;
+use h4cc\AliceFixturesBundle\Fixtures\FixtureSet;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -24,15 +26,19 @@ use Symfony\Component\Console\Output\OutputInterface;
  */
 class LoadFilesCommand extends ContainerAwareCommand
 {
+    /**
+     * @var FixtureManagerRegistry
+     */
+    protected $fixtureManagerRegistry;
+
     protected function configure()
     {
         $this
           ->setName('h4cc_alice_fixtures:load:files')
           ->setDescription('Load fixture files using alice and faker.')
           ->addArgument('files', InputArgument::IS_ARRAY, 'List of files to import.')
-          ->addOption('type', 't', InputOption::VALUE_OPTIONAL, 'Type of loader. Can be "yaml" or "php".', 'yaml')
-          ->addOption('seed', null, InputOption::VALUE_OPTIONAL, 'Seed for random generator.', 1)
-          ->addOption('locale', 'l', InputOption::VALUE_OPTIONAL, 'Locale for Faker provider.', 'en_EN')
+          ->addOption('seed', null, InputOption::VALUE_OPTIONAL, 'Seed for random generator.')
+          ->addOption('locale', 'l', InputOption::VALUE_OPTIONAL, 'Locale for Faker provider.')
           ->addOption('no-persist', 'np', InputOption::VALUE_NONE, 'Persist loaded entities in database.')
           ->addOption('drop', 'd', InputOption::VALUE_NONE, 'Drop and create Schema before loading.')
           ->addOption('manager', 'm', InputOption::VALUE_OPTIONAL, 'The fixture manager name to used.', 'default');
@@ -40,58 +46,45 @@ class LoadFilesCommand extends ContainerAwareCommand
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $name = $input->getOption('manager');
         $files = $input->getArgument('files');
-        $type = $input->getOption('type');
 
         if (!$files) {
-            $output->writeln("No files to load");
+            $output->writeln('No files to load');
         }
 
-        // Check if all files exist
-        foreach ($files as $file) {
-            if (!file_exists($file)) {
-                throw new \InvalidArgumentException("Fixture file does not exist: '$file'.");
-            }
+        $manager = $this->fixtureManagerRegistry->getManager($name);
+
+        $fixtureSet = $manager->createFixtureSet();
+        $fixtureSet->addFiles($files);
+
+        $this->populateSet($fixtureSet, $input);
+
+        $manager->load($fixtureSet);
+    }
+
+    /**
+     * @param FixtureSet $fixtureSet
+     * @param InputInterface $input
+     */
+    protected function populateSet(FixtureSet $fixtureSet, InputInterface $input)
+    {
+        $seed = $input->getOption('seed');
+        $locale = $input->getOption('locale');
+        $persist = !$input->getOption('no-persist');
+        $drop = $input->getOption('drop');
+
+        if ($seed) {
+            $fixtureSet->setSeed($seed);
         }
-
-        $managerServiceId = 'h4cc_alice_fixtures.manager';
-        $schemaToolServiceId = 'h4cc_alice_fixtures.orm.schema_tool';
-
-        if ('default' !== $input->getOption('manager')) {
-            $managerServiceId    = sprintf('h4cc_alice_fixtures.%s_manager', $input->getOption('manager'));
-            $schemaToolServiceId = sprintf('h4cc_alice_fixtures.orm.%s_schema_tool', $input->getOption('manager'));
+        if ($locale) {
+            $fixtureSet->setLocale($locale);
         }
-
-        /**
-         * @var $manager \h4cc\AliceFixturesBundle\Fixtures\FixtureManager
-         */
-        $manager = $this->getContainer()->get($managerServiceId);
-
-        if ($input->getOption('drop')) {
-            $schemaTool = $this->getContainer()->get($schemaToolServiceId);
-            $schemaTool->dropSchema();
-            $schemaTool->createSchema();
+        if ($persist) {
+            $fixtureSet->setDoPersist($persist);
         }
-
-        // Store all loaded references in this array, so they can be used by other FixtureSets.
-        $references = array();
-
-        foreach ($files as $file) {
-            $output->write("Loading file '$file' ... ");
-
-            $set = $manager->createFixtureSet();
-            $set->addFile($file, $type);
-            $set->setDoDrop(false); // Never drop while iterating over files.
-            $set->setDoPersist(!$input->getOption('no-persist'));
-            $set->setLocale($input->getOption('locale'));
-            $set->setSeed($input->getOption('seed'));
-
-            $entities = $manager->load($set, $references);
-
-            // Only reusing loaded entities. Internal references are ignored because of intended private state.
-            $references = array_merge($references, $entities);
-
-            $output->writeln("loaded " . count($entities) . " entities ... done.");
+        if ($drop) {
+            $fixtureSet->setDoDrop($drop);
         }
     }
 }

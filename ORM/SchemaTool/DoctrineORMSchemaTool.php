@@ -9,11 +9,12 @@
  * file that was distributed with this source code.
  */
 
-namespace h4cc\AliceFixturesBundle\ORM;
+namespace h4cc\AliceFixturesBundle\ORM\SchemaTool;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\ORM\Tools\SchemaTool as DoctrineSchemaTool;
+use h4cc\AliceFixturesBundle\ORM\SchemaTool\SchemaToolInterface;
 
 /**
  * Helper tool for creating and dropping ORM Schemas.
@@ -33,6 +34,15 @@ class DoctrineORMSchemaTool implements SchemaToolInterface
     public function __construct(ManagerRegistry $managerRegistry)
     {
         $this->managerRegistry = $managerRegistry;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function recreateSchema()
+    {
+        $this->dropSchema();
+        $this->createSchema();
     }
 
     /**

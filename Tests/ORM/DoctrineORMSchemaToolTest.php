@@ -11,7 +11,7 @@
 
 namespace h4cc\AliceFixturesBundle\Tests;
 
-use h4cc\AliceFixturesBundle\ORM\DoctrineORMSchemaTool;
+use h4cc\AliceFixturesBundle\ORM\SchemaTool\DoctrineORMSchemaTool;
 
 /**
  * Class DoctrineORMSchemaToolTest

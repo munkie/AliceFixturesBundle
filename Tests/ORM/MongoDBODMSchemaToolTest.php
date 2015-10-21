@@ -11,7 +11,7 @@
 
 namespace h4cc\AliceFixturesBundle\Tests;
 
-use h4cc\AliceFixturesBundle\ORM\MongoDBODMSchemaTool;
+use h4cc\AliceFixturesBundle\ORM\SchemaTool\MongoDBODMSchemaTool;
 
 /**
  * Class MongoDBODMSchemaToolTest

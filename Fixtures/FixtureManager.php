@@ -11,15 +11,12 @@
 
 namespace h4cc\AliceFixturesBundle\Fixtures;
 
+use h4cc\AliceFixturesBundle\Loader\FactoryInterface;
 use h4cc\AliceFixturesBundle\ORM\ORMInterface;
+use h4cc\AliceFixturesBundle\ORM\SchemaTool\SchemaToolInterface;
 use Nelmio\Alice\Fixtures;
-use Nelmio\Alice\Fixtures\Loader;
 use Nelmio\Alice\ProcessorInterface;
 use Psr\Log\LoggerInterface;
-use Doctrine\Common\Persistence\ManagerRegistry;
-use h4cc\AliceFixturesBundle\ORM\SchemaToolInterface;
-use h4cc\AliceFixturesBundle\Loader\FactoryInterface;
-use h4cc\AliceFixturesBundle\ORM\Doctrine;
 
 /**
  * Class FixtureManager
@@ -30,56 +27,57 @@ use h4cc\AliceFixturesBundle\ORM\Doctrine;
 class FixtureManager implements FixtureManagerInterface
 {
     /**
-     * Global provider for Faker.
+     * Pre\PostPersist processors.
      *
-     * @var array
-     */
-    protected $providers = array();
-    /**
      * @var ProcessorInterface[]
      */
-    protected $processors = array();
+    protected $processors = [];
+
     /**
-     * Optional logger.
+     * Logger.
      *
-     * @var \Psr\Log\LoggerInterface
+     * @var LoggerInterface
      */
     protected $logger;
+
     /**
      * Default options for new FixtureSets.
      *
      * @var array
      */
-    protected $options = array();
+    protected $options = [];
+
     /**
-     * @var \Nelmio\Alice\Persister\Doctrine
+     * @var ORMInterface
      */
-    protected $orm;
+    protected $persister;
+
     /**
      * @var SchemaToolInterface
      */
     protected $schemaTool;
 
     /**
+     * FixtureManager constructor.
      * @param array $options
-     * @param ManagerRegistry $managerRegistry
-     * @param \h4cc\AliceFixturesBundle\Loader\FactoryInterface $loaderFactory
-     * @param \h4cc\AliceFixturesBundle\ORM\SchemaToolInterface $schemaTool
+     * @param ORMInterface $persister
+     * @param FactoryInterface $loaderFactory
+     * @param SchemaToolInterface $schemaTool
      * @param LoggerInterface $logger
      */
     public function __construct(
         array $options,
-        ManagerRegistry $managerRegistry,
+        ORMInterface $persister,
         FactoryInterface $loaderFactory,
         SchemaToolInterface $schemaTool,
-        LoggerInterface $logger = null
+        LoggerInterface $logger
     )
     {
         $this->options = array_merge(
             $this->getDefaultOptions(),
             $options
         );
-        $this->orm = new Doctrine($managerRegistry, $this->options['do_flush']);
+        $this->persister = $persister;
         $this->loaderFactory = $loaderFactory;
         $this->schemaTool = $schemaTool;
         $this->logger = $logger;
@@ -93,7 +91,6 @@ class FixtureManager implements FixtureManagerInterface
         return array(
             'seed' => 1,
             'locale' => 'en_EN',
-            'do_flush' => true,
         );
     }
 
@@ -101,16 +98,16 @@ class FixtureManager implements FixtureManagerInterface
      * Loads entities from file, does _not_ persist them.
      *
      * @param array $files
-     * @param string $type
      * @return array
      */
-    public function loadFiles(array $files, $type = 'yaml')
+    public function loadFiles(array $files, $doPersist = false, $doDrop = false)
     {
         $set = $this->createFixtureSet();
         foreach ($files as $file) {
-            $set->addFile($file, $type);
+            $set->addFile($file);
         }
-        $set->setDoPersist(false);
+        $set->setDoPersist($doPersist);
+        $set->setDoDrop($doDrop);
 
         return $this->load($set);
     }
@@ -128,57 +125,48 @@ class FixtureManager implements FixtureManagerInterface
     /**
      * {@inheritDoc}
      */
-    public function load(FixtureSet $set, array $initialReferences = array())
+    public function load(FixtureSet $set)
     {
         $loader = $this->loaderFactory->getLoader($set->getLocale());
 
         // Objects are the loaded entities without "local".
-        $objects = array();
-        // References contain, _all_ objects loaded. Needed only for loading.
-        $references = $initialReferences;
+        $objects = [];
 
         // Load each file
-        foreach ($set->getFiles() as $file) {
+        foreach ($set->getFiles() as $dataOrFilename) {
             // Use seed before each loading, so results will be more predictable.
             $this->initSeedFromSet($set);
 
-            $loader->setReferences($references);
-            $this->logDebug(sprintf('Loading file: %s ...', $file['path']));
-            $newObjects = $loader->load($file['path']);
-            $references = $loader->getReferences();
+            $dataName = is_array($dataOrFilename) ? 'data' : 'file ' . $dataOrFilename;
 
-            $this->logDebug(sprintf("Loaded %s file '%s'.", count($newObjects), $file['path']));
+            $this->logger->debug(sprintf('Loading %s ...', $dataName));
+            $newObjects = $loader->load($dataOrFilename['path']);
+
+            $this->logger->debug(sprintf('Loaded %d object(s) from %s.', count($newObjects), $dataName));
             $objects = array_merge($objects, $newObjects);
         }
 
         if ($set->getDoPersist()) {
             $this->persist($objects, $set->getDoDrop());
-            $this->logDebug(sprintf('Persisted %d loaded objects.', count($objects)));
         }
 
         return $objects;
     }
 
     /**
-     * Returns the ORM.
-     *
-     * @throws \InvalidArgumentException
-     * @return ORMInterface
-     */
-    public function getORM()
-    {
-        return $this->orm;
-    }
-
-    /**
      * {@inheritDoc}
      */
-    public function persist(array $entities, $drop = false)
+    public function persist(array $objects, $drop = false)
     {
         if ($drop) {
-            $this->recreateSchema();
+            $this->logger->debug('Recreating schema ...');
+            $this->schemaTool->recreateSchema();
+            $this->logger->debug('Recreated schema.');
         }
-        $this->persistObjects($this->getORM(), $entities);
+
+        $this->logger->debug(sprintf('Persisting %d loaded objects ...', count($objects)));
+        $this->persistObjects($this->persister, $objects);
+        $this->logger->debug(sprintf('Persisted %d loaded objects.', count($objects)));
     }
 
     /**
@@ -186,18 +174,7 @@ class FixtureManager implements FixtureManagerInterface
      */
     public function remove(array $entities)
     {
-        $this->getORM()->remove($entities);
-    }
-
-    /**
-     * Returns the  ORM Schema tool.
-     *
-     * @throws \InvalidArgumentException
-     * @return SchemaToolInterface
-     */
-    public function getSchemaTool()
-    {
-        return $this->schemaTool;
+        $this->persister->remove($entities);
     }
 
     /**
@@ -218,44 +195,7 @@ class FixtureManager implements FixtureManagerInterface
     public function addProcessor(ProcessorInterface $processor)
     {
         $this->processors[] = $processor;
-        $this->logDebug('Added processor: ' . get_class($processor));
-    }
-
-    /**
-     * Sets a list of providers for Faker.
-     *
-     * @param array $providers
-     */
-    public function setProviders(array $providers)
-    {
-        $this->providers = array();
-        foreach ($providers as $provider) {
-            $this->addProvider($provider);
-        }
-    }
-
-    /**
-     * Adds a provider for Faker.
-     *
-     * @param $provider
-     */
-    public function addProvider($provider)
-    {
-        $this->providers[] = $provider;
-        $this->providers = array_unique($this->providers, SORT_REGULAR);
-        $this->logDebug('Added provider: ' . get_class($provider));
-    }
-
-    /**
-     * Logs a message in debug level.
-     *
-     * @param $message
-     */
-    protected function logDebug($message)
-    {
-        if ($this->logger) {
-            $this->logger->debug($message);
-        }
+        $this->logger->debug('Added processor: ' . get_class($processor));
     }
 
     /**
@@ -267,22 +207,11 @@ class FixtureManager implements FixtureManagerInterface
     {
         if (is_numeric($set->getSeed())) {
             mt_srand($set->getSeed());
-            $this->logDebug('Initialized with seed ' . $set->getSeed());
+            $this->logger->debug('Initialized with seed ' . $set->getSeed());
         } else {
             mt_srand();
-            $this->logDebug('Initialized with random seed');
+            $this->logger->debug('Initialized with random seed');
         }
-    }
-
-    /**
-     * Will drop and create the current ORM Schema.
-     */
-    protected function recreateSchema()
-    {
-        $schemaTool = $this->getSchemaTool();
-        $schemaTool->dropSchema();
-        $schemaTool->createSchema();
-        $this->logDebug('Recreated Schema');
     }
 
     /**

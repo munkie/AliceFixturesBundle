@@ -65,7 +65,7 @@ class Factory implements FactoryInterface
     protected $processors = [];
 
     /**
-     * Optional logger.
+     * Logger.
      *
      * @var \Psr\Log\LoggerInterface
      */
@@ -81,12 +81,13 @@ class Factory implements FactoryInterface
     /**
      * Returns a loader for a specific type and locale.
      *
-     * @param $locale
+     * @param string $locale
+     * @param int $seed
      * @return Loader
      */
-    public function getLoader($locale)
+    public function getLoader($locale, $seed = 1)
     {
-        $loader = new Loader($locale);
+        $loader = new Loader($locale, [], $seed);
 
         foreach ($this->builders as $builder) {
             $loader->addBuilder($builder);
@@ -108,9 +109,7 @@ class Factory implements FactoryInterface
         }
 
         $loader->setPersister($this->persister);
-        if ($this->logger) {
-            $loader->setLogger($this->logger);
-        }
+        $loader->setLogger($this->logger);
 
         return $loader;
     }

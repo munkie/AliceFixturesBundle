@@ -23,12 +23,26 @@ use Doctrine\Common\Persistence\ManagerRegistry;
  */
 class Doctrine implements ORMInterface
 {
+    /**
+     * @var bool
+     */
     protected $flush;
+
+    /**
+     * @var ManagerRegistry
+     */
     protected $managerRegistry;
 
     // We need to collect all the used managers for flushing them.
+    /**
+     * @var \Doctrine\Common\Persistence\ObjectManager[]|\SplObjectStorage
+     */
     protected $managersToFlush;
 
+    /**
+     * @param ManagerRegistry $managerRegistry
+     * @param bool $doFlush
+     */
     public function __construct(ManagerRegistry $managerRegistry, $doFlush = true)
     {
         $this->flush = $doFlush;
@@ -43,7 +57,7 @@ class Doctrine implements ORMInterface
     public function persist(array $objects)
     {
         foreach ($objects as $object) {
-            $manager = $this->getManagerFor($object);
+            $manager = $this->getManagerForObject($object);
             $this->managersToFlush->attach($manager);
 
             $manager->persist($object);
@@ -57,10 +71,12 @@ class Doctrine implements ORMInterface
      */
     public function find($class, $id)
     {
-        $entity = $this->getManagerFor($class)->find($class, $id);
+        $entity = $this->getManagerForClass($class)->find($class, $id);
 
-        if (!$entity) {
-            throw new \UnexpectedValueException('Entity with Id ' . $id . ' and Class ' . $class . ' not found');
+        if (null === $entity) {
+            throw new \UnexpectedValueException(
+                sprintf('Entity with Id %s and Class %s not found', $id, $class)
+            );
         }
 
         return $entity;
@@ -74,7 +90,7 @@ class Doctrine implements ORMInterface
         $objects = $this->merge($objects);
 
         foreach ($objects as $object) {
-            $manager = $this->getManagerFor($object);
+            $manager = $this->getManagerForObject($object);
             $this->managersToFlush->attach($manager);
 
             $manager->remove($object);
@@ -90,8 +106,8 @@ class Doctrine implements ORMInterface
     {
         $mergedObjects = array();
 
-        foreach($objects as $object) {
-            $mergedObjects[] = $this->getManagerFor($object)->merge($object);
+        foreach ($objects as $object) {
+            $mergedObjects[] = $this->getManagerForObject($object)->merge($object);
         }
 
         return $mergedObjects;
@@ -103,22 +119,30 @@ class Doctrine implements ORMInterface
     public function detach(array $objects)
     {
         foreach ($objects as $object) {
-            $this->getManagerFor($object)->detach($object);
+            $this->getManagerForObject($object)->detach($object);
         }
     }
 
-    private function getManagerFor($object)
+    /**
+     * @param object $object
+     * @return \Doctrine\Common\Persistence\ObjectManager
+     */
+    private function getManagerForObject($object)
     {
-        if(is_object($object)) {
-            $class = get_class($object);
-        }else{
-            $class = (string)$object;
-        }
+        return $this->getManagerForClass(get_class($object));
+    }
 
+    /**
+     * @param string $class
+     * @return \Doctrine\Common\Persistence\ObjectManager
+     * @throws \RuntimeException
+     */
+    private function getManagerForClass($class)
+    {
         $manager = $this->managerRegistry->getManagerForClass($class);
 
-        if(!$manager) {
-            throw new \RuntimeException('No ObjectManager for class '.$class);
+        if (null === $manager) {
+            throw new \RuntimeException(sprintf('No ObjectManager for class %s', $class));
         }
 
         return $manager;
@@ -127,8 +151,7 @@ class Doctrine implements ORMInterface
     private function flush()
     {
         if ($this->flush) {
-            foreach($this->managersToFlush as $manager) {
-                /** @var \Doctrine\Common\Persistence\ObjectManager $manager */
+            foreach ($this->managersToFlush as $manager) {
                 $manager->flush();
             }
         }
